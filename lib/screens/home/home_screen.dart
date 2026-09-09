@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
+import '../../providers/recipe_provider.dart';
 import '../../utils/app_constants.dart';
 import '../../widgets/bottom_nav_bar.dart';
 import '../../widgets/category_chip.dart';
@@ -8,11 +10,27 @@ import '../../widgets/home_banner.dart';
 import '../../widgets/recipe_card.dart';
 import 'all_recipes_screen.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
   @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  @override
+  void initState() {
+    super.initState();
+
+    Future.microtask(() {
+      context.read<RecipeProvider>().loadRecipes();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final recipeProvider = Provider.of<RecipeProvider>(context);
+
     return Scaffold(
       bottomNavigationBar: const CustomBottomNavBar(),
       body: SafeArea(
@@ -22,6 +40,7 @@ class HomeScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                /// Header
                 Row(
                   children: [
                     const Expanded(
@@ -50,6 +69,7 @@ class HomeScreen extends StatelessWidget {
 
                 const SizedBox(height: 25),
 
+                /// Categories
                 const SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: Row(
@@ -67,6 +87,7 @@ class HomeScreen extends StatelessWidget {
 
                 const SizedBox(height: 25),
 
+                /// Title
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -79,13 +100,13 @@ class HomeScreen extends StatelessWidget {
                     ),
                     TextButton(
                       onPressed: () {
-  Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (_) => const AllRecipesScreen(),
-    ),
-  );
-},
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const AllRecipesScreen(),
+                          ),
+                        );
+                      },
                       child: const Text("View All"),
                     ),
                   ],
@@ -93,30 +114,42 @@ class HomeScreen extends StatelessWidget {
 
                 const SizedBox(height: 15),
 
-                const SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: [
-                      RecipeCard(
-                        title: "Chicken Curry",
-                        calories: "250 kcal",
-                        time: "30 min",
-                      ),
-                      RecipeCard(
-                        title: "French Toast",
-                        calories: "180 kcal",
-                        time: "15 min",
-                      ),
-                      RecipeCard(
-                        title: "Mexican Pizza",
-                        calories: "320 kcal",
-                        time: "40 min",
-                      ),
-                    ],
-                  ),
-                ),
+                /// Loading
+                if (recipeProvider.isLoading)
+                  const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(30),
+                      child: CircularProgressIndicator(),
+                    ),
+                  )
 
-                // Bottom Navigation 
+                /// No Data
+                else if (recipeProvider.recipes.isEmpty)
+                  const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(30),
+                      child: Text(
+                        "No recipes found.",
+                        style: TextStyle(fontSize: 16),
+                      ),
+                    ),
+                  )
+
+                /// Firebase Recipes
+                else
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: recipeProvider.recipes.map((recipe) {
+                        return RecipeCard(
+                          title: recipe.name,
+                          calories: "${recipe.calories} kcal",
+                          time: "${recipe.cookingTime} min",
+                        );
+                      }).toList(),
+                    ),
+                  ),
+
                 const SizedBox(height: 25),
               ],
             ),

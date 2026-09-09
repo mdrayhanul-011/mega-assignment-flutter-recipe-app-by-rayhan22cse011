@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'firebase_options.dart';
 import 'screens/home/home_screen.dart';
 import 'utils/app_theme.dart';
+import 'package:provider/provider.dart';
+import 'providers/recipe_provider.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -12,7 +14,17 @@ Future<void> main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  runApp(const RecipeApp());
+  runApp(
+  MultiProvider(
+    providers: [
+      ChangeNotifierProvider(
+        create: (_) => RecipeProvider(),
+      ),
+    ],
+    child: const RecipeApp(),
+  ),
+);
+
 }
 
 class RecipeApp extends StatelessWidget {
