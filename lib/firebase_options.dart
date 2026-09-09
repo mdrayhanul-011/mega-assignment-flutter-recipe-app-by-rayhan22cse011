@@ -23,10 +23,7 @@ class DefaultFirebaseOptions {
       case TargetPlatform.android:
         return android;
       case TargetPlatform.iOS:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for ios - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return ios;
       case TargetPlatform.macOS:
         return macos;
       case TargetPlatform.windows:
@@ -59,7 +56,6 @@ class DefaultFirebaseOptions {
     projectId: 'assignment-flutter-recipe-app',
     storageBucket: 'assignment-flutter-recipe-app.firebasestorage.app',
   );
-
   static const FirebaseOptions macos = FirebaseOptions(
     apiKey: 'AIzaSyAXMbbRKTKXJ6odoGttFU-O5vhU0-tjf28',
     appId: '1:396051261740:ios:729c2eb82f1da1682ae489',
@@ -76,5 +72,13 @@ class DefaultFirebaseOptions {
     projectId: 'assignment-flutter-recipe-app',
     authDomain: 'assignment-flutter-recipe-app.firebaseapp.com',
     storageBucket: 'assignment-flutter-recipe-app.firebasestorage.app',
+  );
+  static const FirebaseOptions ios = FirebaseOptions(
+    apiKey: 'AIzaSyAXMbbRKTKXJ6odoGttFU-O5vhU0-tjf28',
+    appId: '1:396051261740:ios:729c2eb82f1da1682ae489',
+    messagingSenderId: '396051261740',
+    projectId: 'assignment-flutter-recipe-app',
+    storageBucket: 'assignment-flutter-recipe-app.firebasestorage.app',
+    iosBundleId: 'com.example.megaAssignmentFlutterRecipeApp',
   );
 }
