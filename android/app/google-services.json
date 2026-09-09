@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "396051261740",
+    "project_id": "assignment-flutter-recipe-app",
+    "storage_bucket": "assignment-flutter-recipe-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:396051261740:android:5a4375754cfda2632ae489",
+        "android_client_info": {
+          "package_name": "com.example.mega_assignment_flutter_recipe_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB6uZiM-2ViYX8eMzkmGGKtcKBFd3IpG6o"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
