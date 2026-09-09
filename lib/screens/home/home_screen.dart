@@ -6,6 +6,7 @@ import '../../widgets/category_chip.dart';
 import '../../widgets/custom_search_bar.dart';
 import '../../widgets/home_banner.dart';
 import '../../widgets/recipe_card.dart';
+import 'all_recipes_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -77,7 +78,14 @@ class HomeScreen extends StatelessWidget {
                       ),
                     ),
                     TextButton(
-                      onPressed: () {},
+                      onPressed: () {
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (_) => const AllRecipesScreen(),
+    ),
+  );
+},
                       child: const Text("View All"),
                     ),
                   ],
@@ -108,7 +116,7 @@ class HomeScreen extends StatelessWidget {
                   ),
                 ),
 
-                // Bottom Navigation এর সাথে gap রাখার জন্য
+                // Bottom Navigation 
                 const SizedBox(height: 25),
               ],
             ),
