@@ -1,30 +1,19 @@
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-
+import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
-import 'screens/home/home_screen.dart';
-import 'utils/app_theme.dart';
-import 'package:provider/provider.dart';
-import 'providers/recipe_provider.dart';
+import 'screens/main_navigation_screen.dart';
+import 'utils/app_colors.dart';
 
-Future<void> main() async {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
-
-  runApp(
-  MultiProvider(
-    providers: [
-      ChangeNotifierProvider(
-        create: (_) => RecipeProvider(),
-      ),
-    ],
-    child: const RecipeApp(),
-  ),
-);
-
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  } catch (e) {
+    debugPrint('Firebase initialization notice: $e');
+  }
+  runApp(const RecipeApp());
 }
 
 class RecipeApp extends StatelessWidget {
@@ -33,10 +22,23 @@ class RecipeApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      debugShowCheckedModeBanner: false,
       title: 'Recipe App',
-      theme: AppTheme.lightTheme,
-      home: const HomeScreen(),
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        useMaterial3: true,
+        scaffoldBackgroundColor: AppColors.background,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: AppColors.primary,
+          primary: AppColors.primary,
+          surface: AppColors.surface,
+        ),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: AppColors.surface,
+          surfaceTintColor: Colors.transparent,
+          elevation: 0,
+        ),
+      ),
+      home: const MainNavigationScreen(),
     );
   }
 }
