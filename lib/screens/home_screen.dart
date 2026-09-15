@@ -220,7 +220,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  /// 3. Promotional Banner
   Widget _buildPromotionalBanner() {
     return Container(
       width: double.infinity,
