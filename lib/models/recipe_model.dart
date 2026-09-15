@@ -1,63 +1,117 @@
-import 'ingredient_model.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
+class Ingredient {
+  final String name;
+  final double quantity;
+  final String unit;
+
+  const Ingredient({
+    required this.name,
+    required this.quantity,
+    required this.unit,
+  });
+
+  factory Ingredient.fromMap(Map<String, dynamic> map) {
+    return Ingredient(
+      name: map['name'] as String? ?? '',
+      quantity: (map['quantity'] as num?)?.toDouble() ?? 1.0,
+      unit: map['unit'] as String? ?? '',
+    );
+  }
+
+  Map<String, dynamic> toMap() => {
+        'name': name,
+        'quantity': quantity,
+        'unit': unit,
+      };
+
+  Ingredient copyWith({double? quantity}) {
+    return Ingredient(
+      name: name,
+      quantity: quantity ?? this.quantity,
+      unit: unit,
+    );
+  }
+}
 
 class RecipeModel {
   final String id;
   final String name;
   final String category;
-  final String image;
+  final String imageUrl;
   final int calories;
-  final int cookingTime;
+  final int cookingTimeMinutes;
   final double rating;
-  final int reviewCount;
-  final List<IngredientModel> ingredients;
+  final List<Ingredient> ingredients;
+  bool isFavorite;
 
   RecipeModel({
     required this.id,
     required this.name,
     required this.category,
-    required this.image,
+    required this.imageUrl,
     required this.calories,
-    required this.cookingTime,
-    required this.rating,
-    required this.reviewCount,
-    required this.ingredients,
+    required this.cookingTimeMinutes,
+    this.rating = 4.5,
+    this.ingredients = const [],
+    this.isFavorite = false,
   });
 
-  factory RecipeModel.fromMap(
-    Map<String, dynamic> map,
-    String documentId,
-  ) {
+  /// Creates a RecipeModel from a Firestore document snapshot.
+  factory RecipeModel.fromFirestore(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>;
+    final ingredientsRaw = data['ingredients'] as List<dynamic>? ?? [];
     return RecipeModel(
-      id: documentId,
-      name: map['name'] ?? '',
-      category: map['category'] ?? '',
-      image: map['image'] ?? '',
-      calories: map['calories'] ?? 0,
-      cookingTime: map['cookingTime'] ?? 0,
-      rating: (map['rating'] ?? 0).toDouble(),
-      reviewCount: map['reviewCount'] ?? 0,
-      ingredients: (map['ingredients'] as List<dynamic>? ?? [])
-          .map(
-            (item) => IngredientModel.fromMap(
-              item as Map<String, dynamic>,
-            ),
-          )
+      id: doc.id,
+      name: data['name'] as String? ?? '',
+      category: data['category'] as String? ?? '',
+      imageUrl: data['image'] as String? ?? data['imageUrl'] as String? ?? '',
+      calories: (data['calories'] as num?)?.toInt() ?? 0,
+      cookingTimeMinutes: (data['cookingTime'] as num?)?.toInt() ??
+          (data['cookingTimeMinutes'] as num?)?.toInt() ??
+          0,
+      rating: (data['rating'] as num?)?.toDouble() ?? 4.5,
+      ingredients: ingredientsRaw
+          .map((e) => Ingredient.fromMap(e as Map<String, dynamic>))
           .toList(),
     );
   }
 
-  Map<String, dynamic> toMap() {
-    return {
-      'name': name,
-      'category': category,
-      'image': image,
-      'calories': calories,
-      'cookingTime': cookingTime,
-      'rating': rating,
-      'reviewCount': reviewCount,
-      'ingredients': ingredients
-          .map((ingredient) => ingredient.toMap())
-          .toList(),
-    };
+  /// Creates a RecipeModel from the existing MockRecipe format.
+  factory RecipeModel.fromMock(Map<String, dynamic> map) {
+    return RecipeModel(
+      id: map['id'] as String,
+      name: map['name'] as String,
+      category: map['category'] as String,
+      imageUrl: map['imageUrl'] as String,
+      calories: map['calories'] as int,
+      cookingTimeMinutes: map['cookingTimeMinutes'] as int,
+      rating: 4.5,
+      ingredients: _defaultIngredients(),
+      isFavorite: map['isFavorite'] as bool? ?? false,
+    );
+  }
+
+  RecipeModel copyWith({bool? isFavorite}) {
+    return RecipeModel(
+      id: id,
+      name: name,
+      category: category,
+      imageUrl: imageUrl,
+      calories: calories,
+      cookingTimeMinutes: cookingTimeMinutes,
+      rating: rating,
+      ingredients: ingredients,
+      isFavorite: isFavorite ?? this.isFavorite,
+    );
+  }
+
+  static List<Ingredient> _defaultIngredients() {
+    return [
+      const Ingredient(name: 'Main ingredient', quantity: 200, unit: 'g'),
+      const Ingredient(name: 'Salt', quantity: 1, unit: 'tsp'),
+      const Ingredient(name: 'Olive oil', quantity: 2, unit: 'tbsp'),
+      const Ingredient(name: 'Black pepper', quantity: 0.5, unit: 'tsp'),
+    ];
   }
 }

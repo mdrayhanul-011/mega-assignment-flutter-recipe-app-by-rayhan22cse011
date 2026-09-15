@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../utils/app_colors.dart';
+import '../state/app_state.dart';
 import 'home_screen.dart';
+import 'favorites_screen.dart';
+import 'meal_plan_screen.dart';
+import 'settings_screen.dart';
 
 class MainNavigationScreen extends StatefulWidget {
   const MainNavigationScreen({super.key});
@@ -12,15 +17,18 @@ class MainNavigationScreen extends StatefulWidget {
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _currentIndex = 0;
 
-  final List<Widget> _screens = [
-    const HomeScreen(),
-    const _PlaceholderScreen(title: 'Favorites'),
-    const _PlaceholderScreen(title: 'Meal Plan'),
-    const _PlaceholderScreen(title: 'Settings'),
+  final List<Widget> _screens = const [
+    HomeScreen(),
+    FavoritesScreen(),
+    MealPlanScreen(),
+    SettingsScreen(),
   ];
 
   @override
   Widget build(BuildContext context) {
+    // Listen to favorites count for badge on Favorites tab
+    final favCount = context.watch<AppState>().favoriteIds.length;
+
     return Scaffold(
       body: IndexedStack(
         index: _currentIndex,
@@ -54,25 +62,54 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
               unselectedItemColor: AppColors.textLight,
               selectedFontSize: 12,
               unselectedFontSize: 12,
-              selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600),
-              unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500),
-              items: const [
-                BottomNavigationBarItem(
+              selectedLabelStyle:
+                  const TextStyle(fontWeight: FontWeight.w600),
+              unselectedLabelStyle:
+                  const TextStyle(fontWeight: FontWeight.w500),
+              items: [
+                const BottomNavigationBarItem(
                   icon: Icon(Icons.home_outlined),
                   activeIcon: Icon(Icons.home_rounded),
                   label: 'Home',
                 ),
                 BottomNavigationBarItem(
-                  icon: Icon(Icons.favorite_border_rounded),
-                  activeIcon: Icon(Icons.favorite_rounded),
+                  icon: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      const Icon(Icons.favorite_border_rounded),
+                      if (favCount > 0)
+                        Positioned(
+                          top: -4,
+                          right: -6,
+                          child: Container(
+                            width: 16,
+                            height: 16,
+                            decoration: const BoxDecoration(
+                              color: Color(0xFFFF4D4F),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Center(
+                              child: Text(
+                                '$favCount',
+                                style: const TextStyle(
+                                    fontSize: 9,
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  activeIcon: const Icon(Icons.favorite_rounded),
                   label: 'Favorites',
                 ),
-                BottomNavigationBarItem(
+                const BottomNavigationBarItem(
                   icon: Icon(Icons.calendar_today_outlined),
                   activeIcon: Icon(Icons.calendar_today_rounded),
                   label: 'Meal Plan',
                 ),
-                BottomNavigationBarItem(
+                const BottomNavigationBarItem(
                   icon: Icon(Icons.settings_outlined),
                   activeIcon: Icon(Icons.settings_rounded),
                   label: 'Settings',
@@ -80,61 +117,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
               ],
             ),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Simple placeholder screen for inactive tabs during this stage
-class _PlaceholderScreen extends StatelessWidget {
-  final String title;
-
-  const _PlaceholderScreen({required this.title});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: Text(
-          title,
-          style: const TextStyle(
-            color: AppColors.textPrimary,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        backgroundColor: AppColors.background,
-        elevation: 0,
-        centerTitle: true,
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.construction_rounded,
-              size: 56,
-              color: AppColors.textLight.withValues(alpha: 0.6),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              '$title Screen',
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: AppColors.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 6),
-            const Text(
-              'Coming soon in upcoming stages',
-              style: TextStyle(
-                fontSize: 14,
-                color: AppColors.textSecondary,
-              ),
-            ),
-          ],
         ),
       ),
     );

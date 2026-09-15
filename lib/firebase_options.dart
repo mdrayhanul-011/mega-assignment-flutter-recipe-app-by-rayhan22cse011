@@ -25,9 +25,15 @@ class DefaultFirebaseOptions {
       case TargetPlatform.iOS:
         return ios;
       case TargetPlatform.macOS:
-        return macos;
+        throw UnsupportedError(
+          'DefaultFirebaseOptions have not been configured for macos - '
+          'you can reconfigure this by running the FlutterFire CLI again.',
+        );
       case TargetPlatform.windows:
-        return windows;
+        throw UnsupportedError(
+          'DefaultFirebaseOptions have not been configured for windows - '
+          'you can reconfigure this by running the FlutterFire CLI again.',
+        );
       case TargetPlatform.linux:
         throw UnsupportedError(
           'DefaultFirebaseOptions have not been configured for linux - '
@@ -56,23 +62,7 @@ class DefaultFirebaseOptions {
     projectId: 'assignment-flutter-recipe-app',
     storageBucket: 'assignment-flutter-recipe-app.firebasestorage.app',
   );
-  static const FirebaseOptions macos = FirebaseOptions(
-    apiKey: 'AIzaSyAXMbbRKTKXJ6odoGttFU-O5vhU0-tjf28',
-    appId: '1:396051261740:ios:729c2eb82f1da1682ae489',
-    messagingSenderId: '396051261740',
-    projectId: 'assignment-flutter-recipe-app',
-    storageBucket: 'assignment-flutter-recipe-app.firebasestorage.app',
-    iosBundleId: 'com.example.megaAssignmentFlutterRecipeApp',
-  );
 
-  static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'AIzaSyCeXl6ATUexIuwYOcUoHovG7Mn0DWmRdCY',
-    appId: '1:396051261740:web:295b6c51f1afa7db2ae489',
-    messagingSenderId: '396051261740',
-    projectId: 'assignment-flutter-recipe-app',
-    authDomain: 'assignment-flutter-recipe-app.firebaseapp.com',
-    storageBucket: 'assignment-flutter-recipe-app.firebasestorage.app',
-  );
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyAXMbbRKTKXJ6odoGttFU-O5vhU0-tjf28',
     appId: '1:396051261740:ios:729c2eb82f1da1682ae489',

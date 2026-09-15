@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
-import '../models/mock_recipe.dart';
+import 'package:provider/provider.dart';
+import '../models/recipe_model.dart';
+import '../state/app_state.dart';
 import '../utils/app_colors.dart';
+import 'recipe_detail_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -10,46 +13,65 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final List<String> _categories = const ['All', 'Dinner', 'Lunch', 'Breakfast'];
+  final List<String> _categories = const [
+    'All',
+    'Dinner',
+    'Lunch',
+    'Breakfast',
+  ];
   int _selectedCategoryIndex = 0;
-
-  late final List<MockRecipe> _recipes;
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
 
   @override
-  void initState() {
-    super.initState();
-    _recipes = MockRecipe.getSampleRecipes();
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final appState = context.watch<AppState>();
+    final allRecipes = appState.recipes;
+    final filtered = AppState.filterRecipes(
+      recipes: allRecipes,
+      query: _searchQuery,
+      category: _categories[_selectedCategoryIndex],
+    );
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
-        child: SingleChildScrollView(
+        child: CustomScrollView(
           physics: const BouncingScrollPhysics(),
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildHeader(),
-              const SizedBox(height: 20),
-              _buildSearchBar(),
-              const SizedBox(height: 24),
-              _buildPromotionalBanner(),
-              const SizedBox(height: 24),
-              _buildCategories(),
-              const SizedBox(height: 24),
-              _buildQuickAndEasySection(),
-              const SizedBox(height: 20),
-            ],
-          ),
+          slivers: [
+            SliverPadding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              sliver: SliverList(
+                delegate: SliverChildListDelegate([
+                  _buildHeader(),
+                  const SizedBox(height: 20),
+                  _buildSearchBar(),
+                  const SizedBox(height: 24),
+                  // Only show banner when not searching
+                  if (_searchQuery.isEmpty) ...[
+                    _buildPromotionalBanner(),
+                    const SizedBox(height: 24),
+                  ],
+                  _buildCategories(),
+                  const SizedBox(height: 24),
+                  _buildRecipeSection(filtered),
+                  const SizedBox(height: 20),
+                ]),
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  /// 1. Header: "What are you cooking today?" + Notification icon
+  /// 1. Header
   Widget _buildHeader() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -125,37 +147,58 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  /// 2. Search Bar: "Search any recipes"
+  /// 2. Search Bar — functional with TextField
   Widget _buildSearchBar() {
     return Row(
       children: [
         Expanded(
           child: Container(
             height: 52,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
             decoration: BoxDecoration(
               color: AppColors.searchBarBg,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppColors.border.withValues(alpha: 0.6)),
+              border:
+                  Border.all(color: AppColors.border.withValues(alpha: 0.6)),
             ),
-            child: Row(
-              children: const [
-                Icon(
+            child: TextField(
+              controller: _searchController,
+              onChanged: (value) {
+                setState(() {
+                  _searchQuery = value;
+                });
+              },
+              style: const TextStyle(
+                fontSize: 15,
+                color: AppColors.textPrimary,
+              ),
+              decoration: InputDecoration(
+                hintText: 'Search any recipes',
+                hintStyle: const TextStyle(
+                  fontSize: 15,
+                  color: AppColors.textLight,
+                ),
+                prefixIcon: const Icon(
                   Icons.search_rounded,
                   color: AppColors.textLight,
                   size: 22,
                 ),
-                SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    'Search any recipes',
-                    style: TextStyle(
-                      fontSize: 15,
-                      color: AppColors.textLight,
-                    ),
-                  ),
-                ),
-              ],
+                suffixIcon: _searchQuery.isNotEmpty
+                    ? GestureDetector(
+                        onTap: () {
+                          _searchController.clear();
+                          setState(() => _searchQuery = '');
+                        },
+                        child: const Icon(
+                          Icons.close_rounded,
+                          color: AppColors.textLight,
+                          size: 20,
+                        ),
+                      )
+                    : null,
+                border: InputBorder.none,
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+              ),
             ),
           ),
         ),
@@ -177,7 +220,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  /// 3. Promotional Banner: "Cook the best recipes at home" + "Explore"
+  /// 3. Promotional Banner
   Widget _buildPromotionalBanner() {
     return Container(
       width: double.infinity,
@@ -202,7 +245,6 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       child: Stack(
         children: [
-          // Background subtle circular accents
           Positioned(
             right: -20,
             bottom: -30,
@@ -310,7 +352,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  /// 4. Categories: All, Dinner, Lunch, Breakfast
+  /// 4. Categories
   Widget _buildCategories() {
     return SizedBox(
       height: 40,
@@ -329,12 +371,14 @@ class _HomeScreenState extends State<HomeScreen> {
             },
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 200),
-              padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 8),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 22, vertical: 8),
               decoration: BoxDecoration(
                 color: isSelected ? AppColors.primary : AppColors.surface,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: isSelected ? AppColors.primary : AppColors.border,
+                  color:
+                      isSelected ? AppColors.primary : AppColors.border,
                 ),
                 boxShadow: isSelected
                     ? [
@@ -350,9 +394,13 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Text(
                   _categories[index],
                   style: TextStyle(
-                    color: isSelected ? Colors.white : AppColors.textSecondary,
+                    color: isSelected
+                        ? Colors.white
+                        : AppColors.textSecondary,
                     fontSize: 14,
-                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                    fontWeight: isSelected
+                        ? FontWeight.w600
+                        : FontWeight.w500,
                   ),
                 ),
               ),
@@ -363,202 +411,373 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  /// 5. Quick & Easy Section + 6. Recipe Cards
-  Widget _buildQuickAndEasySection() {
+  /// 5. Recipe section (search-aware)
+  Widget _buildRecipeSection(List<RecipeModel> filtered) {
+    final sectionTitle = _searchQuery.isNotEmpty
+        ? 'Results for "$_searchQuery"'
+        : 'Quick & Easy';
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
+            Expanded(
+              child: Text(
+                sectionTitle,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+            ),
+            if (_searchQuery.isEmpty)
+              GestureDetector(
+                onTap: () {},
+                child: const Text(
+                  'View all',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.primary,
+                  ),
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        if (filtered.isEmpty)
+          _buildNoResults()
+        else if (_searchQuery.isNotEmpty)
+          // Show vertical list when searching
+          Column(
+            children: filtered
+                .map((recipe) => Padding(
+                      padding: const EdgeInsets.only(bottom: 14),
+                      child: _buildSearchResultCard(recipe),
+                    ))
+                .toList(),
+          )
+        else
+          // Horizontal card list (original design)
+          SizedBox(
+            height: 250,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              physics: const BouncingScrollPhysics(),
+              itemCount: filtered.length,
+              separatorBuilder: (context, index) =>
+                  const SizedBox(width: 16),
+              itemBuilder: (context, index) {
+                return _buildRecipeCard(filtered[index]);
+              },
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildNoResults() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 40),
+        child: Column(
+          children: [
+            const Icon(Icons.search_off_rounded,
+                size: 60, color: AppColors.textLight),
+            const SizedBox(height: 12),
             const Text(
-              'Quick & Easy',
+              'No recipes found',
               style: TextStyle(
-                fontSize: 20,
+                fontSize: 18,
                 fontWeight: FontWeight.bold,
                 color: AppColors.textPrimary,
               ),
             ),
-            GestureDetector(
-              onTap: () {},
-              child: const Text(
-                'View all',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.primary,
+            const SizedBox(height: 6),
+            Text(
+              'Try a different name or category',
+              style: const TextStyle(
+                fontSize: 14,
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Search result card (vertical layout)
+  Widget _buildSearchResultCard(RecipeModel recipe) {
+    final appState = context.read<AppState>();
+    final isFav = context.watch<AppState>().isFavorite(recipe.id);
+
+    return GestureDetector(
+      onTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => RecipeDetailScreen(recipe: recipe),
+          ),
+        );
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.border.withValues(alpha: 0.7)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            ClipRRect(
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(16),
+                bottomLeft: Radius.circular(16),
+              ),
+              child: Image.network(
+                recipe.imageUrl,
+                width: 100,
+                height: 90,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stack) => Container(
+                  width: 100,
+                  height: 90,
+                  color: AppColors.primaryLight,
+                  child: const Icon(Icons.fastfood_rounded,
+                      color: AppColors.primary, size: 32),
+                ),
+              ),
+            ),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(recipe.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textPrimary)),
+                    const SizedBox(height: 4),
+                    Text(recipe.category,
+                        style: const TextStyle(
+                            fontSize: 12, color: AppColors.textLight)),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        const Icon(Icons.local_fire_department_rounded,
+                            size: 13, color: AppColors.secondary),
+                        const SizedBox(width: 3),
+                        Text('${recipe.calories} Kcal',
+                            style: const TextStyle(
+                                fontSize: 11,
+                                color: AppColors.textSecondary)),
+                        const SizedBox(width: 8),
+                        const Icon(Icons.schedule_rounded,
+                            size: 13, color: AppColors.primary),
+                        const SizedBox(width: 3),
+                        Text('${recipe.cookingTimeMinutes} Min',
+                            style: const TextStyle(
+                                fontSize: 11,
+                                color: AppColors.textSecondary)),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.only(right: 12),
+              child: GestureDetector(
+                onTap: () => appState.toggleFavorite(recipe.id),
+                child: Icon(
+                  isFav
+                      ? Icons.favorite_rounded
+                      : Icons.favorite_border_rounded,
+                  color: isFav
+                      ? const Color(0xFFFF4D4F)
+                      : AppColors.textSecondary,
+                  size: 22,
                 ),
               ),
             ),
           ],
         ),
-        const SizedBox(height: 16),
-        SizedBox(
-          height: 250,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            physics: const BouncingScrollPhysics(),
-            itemCount: _recipes.length,
-            separatorBuilder: (context, index) => const SizedBox(width: 16),
-            itemBuilder: (context, index) {
-              final recipe = _recipes[index];
-              return _buildRecipeCard(recipe);
-            },
-          ),
-        ),
-      ],
+      ),
     );
   }
 
-  /// Individual Recipe Card
-  Widget _buildRecipeCard(MockRecipe recipe) {
-    return Container(
-      width: 185,
-      decoration: BoxDecoration(
-        color: AppColors.cardBackground,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.border.withValues(alpha: 0.7)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+  /// Individual horizontal Recipe Card (original design preserved)
+  Widget _buildRecipeCard(RecipeModel recipe) {
+    final appState = context.read<AppState>();
+    final isFav = context.watch<AppState>().isFavorite(recipe.id);
+
+    return GestureDetector(
+      onTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => RecipeDetailScreen(recipe: recipe),
           ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Food Image with Heart Icon Overlay
-          Stack(
-            children: [
-              ClipRRect(
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(18),
-                  topRight: Radius.circular(18),
-                ),
-                child: Image.network(
-                  recipe.imageUrl,
-                  height: 125,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Container(
-                      height: 125,
-                      color: Colors.grey.shade200,
-                      child: const Center(
-                        child: Icon(
-                          Icons.fastfood_rounded,
-                          size: 40,
-                          color: AppColors.textLight,
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-              Positioned(
-                top: 8,
-                right: 8,
-                child: GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      recipe.isFavorite = !recipe.isFavorite;
-                    });
-                  },
-                  child: Container(
-                    width: 32,
-                    height: 32,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.92),
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.1),
-                          blurRadius: 4,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Icon(
-                      recipe.isFavorite
-                          ? Icons.favorite_rounded
-                          : Icons.favorite_border_rounded,
-                      color: recipe.isFavorite
-                          ? const Color(0xFFFF4D4F)
-                          : AppColors.textSecondary,
-                      size: 18,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+        );
+      },
+      child: Container(
+        width: 185,
+        decoration: BoxDecoration(
+          color: AppColors.cardBackground,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: AppColors.border.withValues(alpha: 0.7)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Food Image with Heart Icon Overlay
+            Stack(
               children: [
-                // Recipe Name
-                Text(
-                  recipe.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary,
+                ClipRRect(
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(18),
+                    topRight: Radius.circular(18),
+                  ),
+                  child: Image.network(
+                    recipe.imageUrl,
+                    height: 125,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        height: 125,
+                        color: Colors.grey.shade200,
+                        child: const Center(
+                          child: Icon(
+                            Icons.fastfood_rounded,
+                            size: 40,
+                            color: AppColors.textLight,
+                          ),
+                        ),
+                      );
+                    },
                   ),
                 ),
-                const SizedBox(height: 4),
-                // Category label
-                Text(
-                  recipe.category,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: AppColors.textLight,
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: GestureDetector(
+                    onTap: () => appState.toggleFavorite(recipe.id),
+                    child: Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.92),
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.1),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Icon(
+                        isFav
+                            ? Icons.favorite_rounded
+                            : Icons.favorite_border_rounded,
+                        color: isFav
+                            ? const Color(0xFFFF4D4F)
+                            : AppColors.textSecondary,
+                        size: 18,
+                      ),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 12),
-                // Calories & Cooking time
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.local_fire_department_rounded,
-                      size: 14,
-                      color: AppColors.secondary,
-                    ),
-                    const SizedBox(width: 3),
-                    Text(
-                      '${recipe.calories} Kcal',
-                      style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w500,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                    const Spacer(),
-                    const Icon(
-                      Icons.schedule_rounded,
-                      size: 14,
-                      color: AppColors.primary,
-                    ),
-                    const SizedBox(width: 3),
-                    Text(
-                      '${recipe.cookingTimeMinutes} Min',
-                      style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w500,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                  ],
                 ),
               ],
             ),
-          ),
-        ],
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Recipe Name
+                  Text(
+                    recipe.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  // Category label
+                  Text(
+                    recipe.category,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.textLight,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  // Calories & Cooking time
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.local_fire_department_rounded,
+                        size: 14,
+                        color: AppColors.secondary,
+                      ),
+                      const SizedBox(width: 3),
+                      Text(
+                        '${recipe.calories} Kcal',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                      const Spacer(),
+                      const Icon(
+                        Icons.schedule_rounded,
+                        size: 14,
+                        color: AppColors.primary,
+                      ),
+                      const SizedBox(width: 3),
+                      Text(
+                        '${recipe.cookingTimeMinutes} Min',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
