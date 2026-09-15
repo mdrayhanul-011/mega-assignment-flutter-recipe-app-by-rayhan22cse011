@@ -123,7 +123,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                 ),
               ),
             ),
-            // Gradient overlay at bottom
+            
             Positioned(
               bottom: 0,
               left: 0,

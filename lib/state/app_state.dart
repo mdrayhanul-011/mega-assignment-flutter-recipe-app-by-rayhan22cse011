@@ -35,7 +35,7 @@ class AppState extends ChangeNotifier {
   }
 
   void setFirestoreRecipes(List<RecipeModel> firestoreRecipes) {
-    // Preserve local isFavorite flags
+    // Preserve local isFavorite flag
     _recipes = firestoreRecipes.map((r) {
       return r.copyWith(isFavorite: _favoriteIds.contains(r.id));
     }).toList();

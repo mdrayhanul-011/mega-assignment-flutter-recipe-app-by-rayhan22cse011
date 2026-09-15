@@ -139,7 +139,7 @@ class _FavoriteRecipeCard extends StatelessWidget {
                 ),
               ),
             ),
-            
+          
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.all(14),
