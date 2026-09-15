@@ -29,7 +29,7 @@ class SettingsScreen extends StatelessWidget {
           _buildProfileCard(),
           const SizedBox(height: 24),
 
-          // Account section
+          
           _buildSectionHeader('Account'),
           const SizedBox(height: 10),
           _buildSettingsGroup([
