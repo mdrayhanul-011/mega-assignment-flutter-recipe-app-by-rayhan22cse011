@@ -43,6 +43,7 @@ class FavoritesScreen extends StatelessWidget {
     );
   }
 
+  /// Empty state for when no favorites are saved.
   Widget _buildEmptyState() {
     return Center(
       child: Column(
@@ -118,7 +119,7 @@ class _FavoriteRecipeCard extends StatelessWidget {
         ),
         child: Row(
           children: [
-            // Image
+          
             ClipRRect(
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(18),
@@ -138,7 +139,7 @@ class _FavoriteRecipeCard extends StatelessWidget {
                 ),
               ),
             ),
-            // Details
+            
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.all(14),
@@ -186,7 +187,7 @@ class _FavoriteRecipeCard extends StatelessWidget {
                 ),
               ),
             ),
-            // Unfavorite button
+            // unfavorite button
             Padding(
               padding: const EdgeInsets.only(right: 12),
               child: GestureDetector(
