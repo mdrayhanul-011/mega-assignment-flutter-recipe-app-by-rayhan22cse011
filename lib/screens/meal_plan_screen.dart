@@ -18,7 +18,7 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
   String get _dateKey =>
       '${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}';
 
-  // Generate a list of 7 days centred on today
+  
   List<DateTime> get _days {
     final today = DateTime.now();
     return List.generate(7, (i) => today.add(Duration(days: i - 0)));
