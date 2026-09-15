@@ -57,7 +57,6 @@ class RecipeModel {
     this.isFavorite = false,
   });
 
-  /// Creates a RecipeModel from a Firestore document snapshot.
   factory RecipeModel.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
     final ingredientsRaw = data['ingredients'] as List<dynamic>? ?? [];
@@ -77,7 +76,7 @@ class RecipeModel {
     );
   }
 
-  /// Creates a RecipeModel from the existing MockRecipe format.
+  
   factory RecipeModel.fromMock(Map<String, dynamic> map) {
     return RecipeModel(
       id: map['id'] as String,
