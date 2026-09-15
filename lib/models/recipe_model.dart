@@ -76,7 +76,6 @@ class RecipeModel {
     );
   }
 
-  
   factory RecipeModel.fromMock(Map<String, dynamic> map) {
     return RecipeModel(
       id: map['id'] as String,

@@ -7,6 +7,7 @@ class MockRecipe {
   final int cookingTimeMinutes;
   bool isFavorite;
 
+
   MockRecipe({
     required this.id,
     required this.name,

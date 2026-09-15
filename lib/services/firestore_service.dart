@@ -10,7 +10,7 @@ class FirestoreService {
 
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
-  /// Loads recipes from Firestore and updates AppState.
+  /// Loads recipes from Firestore and updates AppState
   /// Silently falls back to mock data on error or empty collection.
   Future<void> loadRecipes(AppState appState) async {
     try {
