@@ -26,7 +26,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Listen to favorites count for badge on Favorites tab
+    
     final favCount = context.watch<AppState>().favoriteIds.length;
 
     return Scaffold(

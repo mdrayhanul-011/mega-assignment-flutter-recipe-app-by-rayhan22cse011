@@ -7,6 +7,7 @@ import 'services/firestore_service.dart';
 import 'state/app_state.dart';
 import 'utils/app_colors.dart';
 
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   try {
