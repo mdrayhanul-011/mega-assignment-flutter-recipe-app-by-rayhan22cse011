@@ -1,50 +1,101 @@
-import 'package:flutter/foundation.dart';
-import '../models/mock_recipe.dart';
+import 'dart:async';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart' as foundation;
 import '../models/recipe_model.dart';
+import '../services/firestore_service.dart';
 
 /// Meal plan structure: date string → meal type → recipe (nullable)
 typedef DayPlan = Map<String, RecipeModel?>;
 
-class AppState extends ChangeNotifier {
+class AppState extends foundation.ChangeNotifier {
+  final FirestoreService _firestoreService;
+
   // ─── Recipes ───────────────────────────────────────────────
   List<RecipeModel> _recipes = [];
-  bool _isLoading = false;
+  bool _isLoading = true;
+  String? _errorMessage;
+  StreamSubscription<List<RecipeModel>>? _recipesSubscription;
 
   List<RecipeModel> get recipes => _recipes;
   bool get isLoading => _isLoading;
+  String? get errorMessage => _errorMessage;
+  bool get hasError => _errorMessage != null;
 
-  /// Initialise with mock data immediately, then swap to Firestore when available.
-  AppState() {
-    _loadMockData();
+  AppState({FirestoreService? firestoreService})
+      : _firestoreService = firestoreService ?? FirestoreService() {
+    initRecipesStream();
   }
 
-  void _loadMockData() {
-    _recipes = MockRecipe.getSampleRecipes().map((m) {
-      return RecipeModel(
-        id: m.id,
-        name: m.name,
-        category: m.category,
-        imageUrl: m.imageUrl,
-        calories: m.calories,
-        cookingTimeMinutes: m.cookingTimeMinutes,
-        rating: 4.5,
-        ingredients: _defaultIngredients(m.name),
-        isFavorite: _favoriteIds.contains(m.id),
+  /// Connects to real-time Firestore stream and updates state dynamically.
+  void initRecipesStream() {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    if (Firebase.apps.isEmpty) {
+      _isLoading = false;
+      _errorMessage = 'Firebase is not initialized';
+      notifyListeners();
+      return;
+    }
+
+    _recipesSubscription?.cancel();
+    try {
+      _recipesSubscription = _firestoreService.getRecipesStream().listen(
+        (firestoreRecipes) {
+          _recipes = firestoreRecipes.map((r) {
+            return r.copyWith(isFavorite: _favoriteIds.contains(r.id));
+          }).toList();
+          _isLoading = false;
+          _errorMessage = null;
+          notifyListeners();
+        },
+        onError: (error) {
+          _isLoading = false;
+          _errorMessage = 'Failed to connect to Firestore: $error';
+          foundation.debugPrint('[AppState] Firestore stream error: $error');
+          notifyListeners();
+        },
       );
-    }).toList();
+    } catch (e) {
+      _isLoading = false;
+      _errorMessage = 'Could not initialize Firestore: $e';
+      foundation.debugPrint('[AppState] Stream init error: $e');
+      notifyListeners();
+    }
+  }
+
+  void retryLoading() {
+    initRecipesStream();
   }
 
   void setFirestoreRecipes(List<RecipeModel> firestoreRecipes) {
-    // Preserve local isFavorite flag
     _recipes = firestoreRecipes.map((r) {
       return r.copyWith(isFavorite: _favoriteIds.contains(r.id));
     }).toList();
+    _isLoading = false;
+    _errorMessage = null;
     notifyListeners();
   }
 
   void setLoading(bool loading) {
     _isLoading = loading;
     notifyListeners();
+  }
+
+  // ─── Dynamic Categories ────────────────────────────────────
+  /// Derives categories dynamically from loaded recipes. Always puts 'All' first.
+  List<String> get categories {
+    final Set<String> uniqueCategories = {};
+    for (final recipe in _recipes) {
+      final trimmed = recipe.category.trim();
+      if (trimmed.isNotEmpty) {
+        uniqueCategories.add(trimmed);
+      }
+    }
+    final sorted = uniqueCategories.toList()
+      ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+    return ['All', ...sorted];
   }
 
   // ─── Favorites ─────────────────────────────────────────────
@@ -107,22 +158,17 @@ class AppState extends ChangeNotifier {
     required String category,
   }) {
     return recipes.where((r) {
-      final matchesCategory =
-          category == 'All' || r.category.toLowerCase() == category.toLowerCase();
+      final matchesCategory = category == 'All' ||
+          r.category.trim().toLowerCase() == category.trim().toLowerCase();
       final matchesQuery =
           query.isEmpty || r.name.toLowerCase().contains(query.toLowerCase());
       return matchesCategory && matchesQuery;
     }).toList();
   }
 
-  static List<Ingredient> _defaultIngredients(String recipeName) {
-    // Provide realistic defaults based on recipe name
-    return [
-      const Ingredient(name: 'Main ingredient', quantity: 200, unit: 'g'),
-      const Ingredient(name: 'Olive oil', quantity: 2, unit: 'tbsp'),
-      const Ingredient(name: 'Salt', quantity: 1, unit: 'tsp'),
-      const Ingredient(name: 'Black pepper', quantity: 0.5, unit: 'tsp'),
-      const Ingredient(name: 'Garlic', quantity: 3, unit: 'cloves'),
-    ];
+  @override
+  void dispose() {
+    _recipesSubscription?.cancel();
+    super.dispose();
   }
 }

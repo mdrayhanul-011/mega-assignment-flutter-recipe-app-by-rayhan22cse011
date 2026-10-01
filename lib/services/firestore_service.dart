@@ -1,33 +1,29 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart' as foundation;
 import '../models/recipe_model.dart';
-import '../state/app_state.dart';
 
 class FirestoreService {
   static final FirestoreService _instance = FirestoreService._internal();
   factory FirestoreService() => _instance;
   FirestoreService._internal();
 
-  final FirebaseFirestore _db = FirebaseFirestore.instance;
+  FirebaseFirestore get _db => FirebaseFirestore.instance;
 
-  /// Loads recipes from Firestore and updates AppState
-  /// Silently falls back to mock data on error or empty collection.
-  Future<void> loadRecipes(AppState appState) async {
-    try {
-      appState.setLoading(true);
-      final snapshot = await _db.collection('recipes').get();
-      if (snapshot.docs.isEmpty) {
-        // No data in Firestore — keep mock data
-        return;
+  /// Returns a real-time stream of recipes from Firestore.
+  /// Individual invalid documents are logged and skipped without crashing the stream.
+  Stream<List<RecipeModel>> getRecipesStream() {
+    return _db.collection('recipes').snapshots().map((snapshot) {
+      final List<RecipeModel> recipes = [];
+      for (final doc in snapshot.docs) {
+        try {
+          recipes.add(RecipeModel.fromFirestore(doc));
+        } catch (e, stack) {
+          foundation.debugPrint(
+            '[FirestoreService] Skipping invalid document ${doc.id}: $e\n$stack',
+          );
+        }
       }
-      final recipes =
-          snapshot.docs.map((doc) => RecipeModel.fromFirestore(doc)).toList();
-      appState.setFirestoreRecipes(recipes);
-    } catch (e) {
-      // Firestore unavailable — keep mock data as fallback
-      foundation.debugPrint('[FirestoreService] Firestore load skipped (using mock data): $e');
-    } finally {
-      appState.setLoading(false);
-    }
+      return recipes;
+    });
   }
 }

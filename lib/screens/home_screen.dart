@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import '../models/recipe_model.dart';
 import '../state/app_state.dart';
 import '../utils/app_colors.dart';
+import '../widgets/recipe_card.dart';
+import 'all_recipes_screen.dart';
 import 'recipe_detail_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -13,13 +15,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final List<String> _categories = const [
-    'All',
-    'Dinner',
-    'Lunch',
-    'Breakfast',
-  ];
-  int _selectedCategoryIndex = 0;
+  String _selectedCategory = 'All';
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
 
@@ -33,10 +29,14 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final appState = context.watch<AppState>();
     final allRecipes = appState.recipes;
+    final categories = appState.categories;
+    final activeCategory =
+        categories.contains(_selectedCategory) ? _selectedCategory : 'All';
+
     final filtered = AppState.filterRecipes(
       recipes: allRecipes,
       query: _searchQuery,
-      category: _categories[_selectedCategoryIndex],
+      category: activeCategory,
     );
 
     return Scaffold(
@@ -58,9 +58,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     _buildPromotionalBanner(),
                     const SizedBox(height: 24),
                   ],
-                  _buildCategories(),
+                  _buildCategories(categories, activeCategory),
                   const SizedBox(height: 24),
-                  _buildRecipeSection(filtered),
+                  _buildRecipeSection(context, appState, filtered),
                   const SizedBox(height: 20),
                 ]),
               ),
@@ -349,23 +349,23 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
     );
-  }
-
-  /// 4. Categories
-  Widget _buildCategories() {
+  }  /// 4. Categories (dynamically derived from loaded recipes)
+  Widget _buildCategories(List<String> categories, String selectedCategory) {
     return SizedBox(
       height: 40,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         physics: const BouncingScrollPhysics(),
-        itemCount: _categories.length,
+        itemCount: categories.length,
         separatorBuilder: (context, index) => const SizedBox(width: 10),
         itemBuilder: (context, index) {
-          final isSelected = _selectedCategoryIndex == index;
+          final cat = categories[index];
+          final isSelected =
+              cat.toLowerCase() == selectedCategory.toLowerCase();
           return GestureDetector(
             onTap: () {
               setState(() {
-                _selectedCategoryIndex = index;
+                _selectedCategory = cat;
               });
             },
             child: AnimatedContainer(
@@ -391,7 +391,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               child: Center(
                 child: Text(
-                  _categories[index],
+                  cat,
                   style: TextStyle(
                     color: isSelected
                         ? Colors.white
@@ -410,8 +410,12 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  /// 5. Recipe section (search-aware)
-  Widget _buildRecipeSection(List<RecipeModel> filtered) {
+  /// 5. Recipe section (search-aware, real-time aware)
+  Widget _buildRecipeSection(
+    BuildContext context,
+    AppState appState,
+    List<RecipeModel> filtered,
+  ) {
     final sectionTitle = _searchQuery.isNotEmpty
         ? 'Results for "$_searchQuery"'
         : 'Quick & Easy';
@@ -434,9 +438,15 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
             ),
-            if (_searchQuery.isEmpty)
+            if (_searchQuery.isEmpty && filtered.isNotEmpty)
               GestureDetector(
-                onTap: () {},
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const AllRecipesScreen(),
+                    ),
+                  );
+                },
                 child: const Text(
                   'View all',
                   style: TextStyle(
@@ -449,7 +459,18 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
         const SizedBox(height: 16),
-        if (filtered.isEmpty)
+        if (appState.isLoading && appState.recipes.isEmpty)
+          const Center(
+            child: Padding(
+              padding: EdgeInsets.symmetric(vertical: 40),
+              child: CircularProgressIndicator(color: AppColors.primary),
+            ),
+          )
+        else if (appState.hasError && appState.recipes.isEmpty)
+          _buildErrorState(appState)
+        else if (appState.recipes.isEmpty)
+          _buildEmptyFirestore()
+        else if (filtered.isEmpty)
           _buildNoResults()
         else if (_searchQuery.isNotEmpty)
           // Show vertical list when searching
@@ -472,7 +493,7 @@ class _HomeScreenState extends State<HomeScreen> {
               separatorBuilder: (context, index) =>
                   const SizedBox(width: 16),
               itemBuilder: (context, index) {
-                return _buildRecipeCard(filtered[index]);
+                return RecipeCard(recipe: filtered[index], width: 185);
               },
             ),
           ),
@@ -480,17 +501,17 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildNoResults() {
+  Widget _buildErrorState(AppState appState) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 40),
+        padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 16),
         child: Column(
           children: [
-            const Icon(Icons.search_off_rounded,
-                size: 60, color: AppColors.textLight),
+            const Icon(Icons.error_outline_rounded,
+                size: 56, color: Color(0xFFFF4D4F)),
             const SizedBox(height: 12),
             const Text(
-              'No recipes found',
+              'Unable to load recipes',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -499,8 +520,86 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(height: 6),
             Text(
-              'Try a different name or category',
+              appState.errorMessage ??
+                  'Please check your connection and Firebase setup.',
+              textAlign: TextAlign.center,
               style: const TextStyle(
+                fontSize: 13,
+                color: AppColors.textSecondary,
+              ),
+            ),
+            const SizedBox(height: 14),
+            ElevatedButton.icon(
+              onPressed: () => appState.retryLoading(),
+              icon: const Icon(Icons.refresh_rounded, size: 18),
+              label: const Text('Retry'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyFirestore() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 40),
+        child: Column(
+          children: const [
+            Icon(Icons.restaurant_menu_rounded,
+                size: 60, color: AppColors.textLight),
+            SizedBox(height: 12),
+            Text(
+              'No recipes in Firestore yet',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            SizedBox(height: 6),
+            Text(
+              'Add recipe documents to your "recipes" collection.',
+              style: TextStyle(
+                fontSize: 14,
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNoResults() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 40),
+        child: Column(
+          children: const [
+            Icon(Icons.search_off_rounded,
+                size: 60, color: AppColors.textLight),
+            SizedBox(height: 12),
+            Text(
+              'No recipes found',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            SizedBox(height: 6),
+            Text(
+              'Try a different name or category',
+              style: TextStyle(
                 fontSize: 14,
                 color: AppColors.textSecondary,
               ),
@@ -620,164 +719,5 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  /// Individual horizontal Recipe Card (original design preserved)
-  Widget _buildRecipeCard(RecipeModel recipe) {
-    final appState = context.read<AppState>();
-    final isFav = context.watch<AppState>().isFavorite(recipe.id);
 
-    return GestureDetector(
-      onTap: () {
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => RecipeDetailScreen(recipe: recipe),
-          ),
-        );
-      },
-      child: Container(
-        width: 185,
-        decoration: BoxDecoration(
-          color: AppColors.cardBackground,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: AppColors.border.withValues(alpha: 0.7)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Food Image with Heart Icon Overlay
-            Stack(
-              children: [
-                ClipRRect(
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(18),
-                    topRight: Radius.circular(18),
-                  ),
-                  child: Image.network(
-                    recipe.imageUrl,
-                    height: 125,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Container(
-                        height: 125,
-                        color: Colors.grey.shade200,
-                        child: const Center(
-                          child: Icon(
-                            Icons.fastfood_rounded,
-                            size: 40,
-                            color: AppColors.textLight,
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-                Positioned(
-                  top: 8,
-                  right: 8,
-                  child: GestureDetector(
-                    onTap: () => appState.toggleFavorite(recipe.id),
-                    child: Container(
-                      width: 32,
-                      height: 32,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.92),
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.1),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: Icon(
-                        isFav
-                            ? Icons.favorite_rounded
-                            : Icons.favorite_border_rounded,
-                        color: isFav
-                            ? const Color(0xFFFF4D4F)
-                            : AppColors.textSecondary,
-                        size: 18,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Recipe Name
-                  Text(
-                    recipe.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  // Category label
-                  Text(
-                    recipe.category,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      color: AppColors.textLight,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  // Calories & Cooking time
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.local_fire_department_rounded,
-                        size: 14,
-                        color: AppColors.secondary,
-                      ),
-                      const SizedBox(width: 3),
-                      Text(
-                        '${recipe.calories} Kcal',
-                        style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w500,
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                      const Spacer(),
-                      const Icon(
-                        Icons.schedule_rounded,
-                        size: 14,
-                        color: AppColors.primary,
-                      ),
-                      const SizedBox(width: 3),
-                      Text(
-                        '${recipe.cookingTimeMinutes} Min',
-                        style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w500,
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }

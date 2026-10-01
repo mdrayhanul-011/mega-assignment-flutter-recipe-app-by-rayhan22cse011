@@ -3,10 +3,8 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
 import 'firebase_options.dart';
 import 'screens/main_navigation_screen.dart';
-import 'services/firestore_service.dart';
 import 'state/app_state.dart';
 import 'utils/app_colors.dart';
-
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -26,12 +24,7 @@ class RecipeApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) {
-        final appState = AppState();
-        // Attempt to load Firestore data; falls back to mock on failure
-        FirestoreService().loadRecipes(appState);
-        return appState;
-      },
+      create: (_) => AppState(),
       child: MaterialApp(
         title: 'Recipe App',
         debugShowCheckedModeBanner: false,
@@ -54,4 +47,3 @@ class RecipeApp extends StatelessWidget {
     );
   }
 }
-

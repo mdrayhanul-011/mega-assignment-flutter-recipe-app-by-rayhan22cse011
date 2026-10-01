@@ -14,33 +14,42 @@ class RecipeDetailScreen extends StatefulWidget {
 }
 
 class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
-  int _servings = 2;
-  static const int _baseServings = 2;
+  int _servings = 1;
+  static const int _baseServings = 1;
+
+  RecipeModel get _recipe {
+    final appState = context.watch<AppState>();
+    return appState.recipes.firstWhere(
+      (r) => r.id == widget.recipe.id,
+      orElse: () => widget.recipe,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final appState = context.watch<AppState>();
-    final isFav = appState.isFavorite(widget.recipe.id);
+    final recipe = _recipe;
+    final isFav = appState.isFavorite(recipe.id);
 
     return Scaffold(
       backgroundColor: AppColors.background,
       body: CustomScrollView(
         physics: const BouncingScrollPhysics(),
         slivers: [
-          _buildAppBar(context, isFav, appState),
+          _buildAppBar(context, isFav, appState, recipe),
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.all(20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildTitleSection(),
+                  _buildTitleSection(recipe),
                   const SizedBox(height: 20),
-                  _buildStatsRow(),
+                  _buildStatsRow(recipe),
                   const SizedBox(height: 28),
                   _buildServingSelector(),
                   const SizedBox(height: 28),
-                  _buildIngredientsSection(),
+                  _buildIngredientsSection(recipe),
                   const SizedBox(height: 32),
                   _buildStartCookingButton(),
                   const SizedBox(height: 24),
@@ -54,7 +63,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
   }
 
   SliverAppBar _buildAppBar(
-      BuildContext context, bool isFav, AppState appState) {
+      BuildContext context, bool isFav, AppState appState, RecipeModel recipe) {
     return SliverAppBar(
       expandedHeight: 300,
       pinned: true,
@@ -84,7 +93,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
         Padding(
           padding: const EdgeInsets.all(8),
           child: GestureDetector(
-            onTap: () => appState.toggleFavorite(widget.recipe.id),
+            onTap: () => appState.toggleFavorite(recipe.id),
             child: Container(
               width: 40,
               height: 40,
@@ -113,7 +122,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
           fit: StackFit.expand,
           children: [
             Image.network(
-              widget.recipe.imageUrl,
+              recipe.imageUrl,
               fit: BoxFit.cover,
               errorBuilder: (context, error, _) => Container(
                 color: AppColors.primaryLight,
@@ -148,29 +157,42 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
     );
   }
 
-  Widget _buildTitleSection() {
+  Widget _buildTitleSection(RecipeModel recipe) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Category chip
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-          decoration: BoxDecoration(
-            color: AppColors.primaryLight,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Text(
-            widget.recipe.category,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: AppColors.primary,
+        // Category chip & Cost
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+              decoration: BoxDecoration(
+                color: AppColors.primaryLight,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                recipe.category,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.primary,
+                ),
+              ),
             ),
-          ),
+            Text(
+              'Cost: ৳${recipe.cost}',
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: AppColors.primary,
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 10),
         Text(
-          widget.recipe.name,
+          recipe.name,
           style: const TextStyle(
             fontSize: 26,
             fontWeight: FontWeight.bold,
@@ -185,7 +207,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
             const Icon(Icons.star_rounded, color: Color(0xFFFFB800), size: 20),
             const SizedBox(width: 4),
             Text(
-              widget.recipe.rating.toStringAsFixed(1),
+              recipe.rating.toStringAsFixed(1),
               style: const TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w700,
@@ -206,7 +228,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
     );
   }
 
-  Widget _buildStatsRow() {
+  Widget _buildStatsRow(RecipeModel recipe) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 16),
       decoration: BoxDecoration(
@@ -227,14 +249,14 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
           _statItem(
             icon: Icons.local_fire_department_rounded,
             iconColor: AppColors.secondary,
-            value: '${widget.recipe.calories}',
+            value: '${recipe.calories}',
             label: 'Calories',
           ),
           _divider(),
           _statItem(
             icon: Icons.schedule_rounded,
             iconColor: AppColors.primary,
-            value: '${widget.recipe.cookingTimeMinutes} min',
+            value: '${recipe.cookingTimeMinutes} min',
             label: 'Cook Time',
           ),
           _divider(),
@@ -341,9 +363,9 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
     );
   }
 
-  Widget _buildIngredientsSection() {
+  Widget _buildIngredientsSection(RecipeModel recipe) {
     final multiplier = _servings / _baseServings;
-    final ingredients = widget.recipe.ingredients;
+    final ingredients = recipe.ingredients;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -359,8 +381,8 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
         const SizedBox(height: 16),
         if (ingredients.isEmpty)
           const Text(
-            'Ingredient details coming soon.',
-            style: TextStyle(color: AppColors.textLight),
+            'No ingredients listed.',
+            style: TextStyle(color: AppColors.textLight, fontSize: 14),
           )
         else
           ListView.separated(
@@ -371,6 +393,12 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
             itemBuilder: (context, index) {
               final ing = ingredients[index];
               final adjustedQty = ing.quantity * multiplier;
+              final qtyStr = _formatQty(adjustedQty);
+              final unitStr = ing.unit.trim();
+              final displayText = unitStr.isNotEmpty
+                  ? '${ing.name} - $qtyStr $unitStr'
+                  : (adjustedQty > 0 ? '${ing.name} - $qtyStr' : ing.name);
+
               return Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 decoration: BoxDecoration(
@@ -393,20 +421,12 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                     const SizedBox(width: 14),
                     Expanded(
                       child: Text(
-                        ing.name,
+                        displayText,
                         style: const TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w600,
                           color: AppColors.textPrimary,
                         ),
-                      ),
-                    ),
-                    Text(
-                      '${_formatQty(adjustedQty)} ${ing.unit}',
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        color: AppColors.textSecondary,
                       ),
                     ),
                   ],
